@@ -9,7 +9,7 @@ from nifti import *
 from pylab import *
 
 # TODO: I/O, 3rd dim, uMRF
-path = '/home/smorrell/git/ipmi/MPHGB06_coursework_part'
+path = '/home/smorrell/git/ipmicoursew/MPHGB06_coursework_part'
 path_in = path + '1/images/'
 path_out_ff = path + '1/out_ff/'
 path_out_priors = path + '1/out_priors/'  # transformed priors

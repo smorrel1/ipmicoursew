@@ -8,7 +8,7 @@ from pylab import *
 # ref_image = '/home/smorrell/Dropbox/PhD/IPMI/ipmicoursew/MPHGB06_coursework_part1/images/1056_F_71.22_AD_60740.nii'
 import subprocess
 import os
-path = '/home/smorrell/git/ipmi/MPHGB06_coursework_part'
+path = '/home/smorrell/git/ipmicoursew/MPHGB06_coursework_part'
 path_in = path + '1/images/'
 path_ave = path + '2/average/'
 path_out_rigid = path + '1/out_rigid/'
@@ -43,14 +43,22 @@ def non_linear_registration():
               ' -aff ' + path_out_rigid + 'ref_t_flo_p_affine_matrix' + file_name[:-4] + '.txt' \
               ' -cpp ' + path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name
               # 	-cpp <filename>		Filename of control point grid [outputCPP.nii]
+    # TODO L can we initialise with the affine matrix?
     by_my_irroyal(command)
 
 def resample_priors():
   for file_name in os.listdir(path_in):
     command = 'reg_resample -ref ' + path_in + file_name + ' -flo ' + path_ave + 'average_priors.nii' + \
               ' -res ' + path_out_priors + 'propagated_priors' + file_name + \
+              ' -trans ' + path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name + ' -inter 0'  # trans is from f3d
+# -trans Filename of the file containing the transformation parametrisation (from reg_aladin, reg_f3d or reg_transform)
+    by_my_irroyal(command)
+
+def resample_labels():
+  for file_name in os.listdir(path_in):
+    command = 'reg_resample -ref ' + path_in + file_name + ' -flo ' + path_ave + 'average_label.nii' + \
+              ' -res ' + path_out_labels + 'propagated_labels' + file_name + \
               ' -trans ' + path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name + ' -inter 0'
-#	-trans Filename of the file containing the transformation parametrisation (from reg_aladin, reg_f3d or reg_transform)
     by_my_irroyal(command)
 
 def show_images():
