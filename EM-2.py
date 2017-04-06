@@ -28,7 +28,7 @@ def save_file(array,filename):
 #    imagefile = array_to_image(array)
 #    imagefile.save(filename)
 
-def uMRF (pik, k):
+def uMRF (pik, k):  #  TODO: add z dimension to arrays and inside j loop.  Why is k passed but not used?
     G = np.ones((4, 4))-np.diag([1,1,1,1])
     umrf = np.ndarray([np.size(pik,0),np.size(pik,1),np.size(pik,2)])
     for x in range(0, np.size(pik,0)):    
@@ -46,6 +46,7 @@ def uMRF (pik, k):
                             umrfj += pik[x-1,y,z,j] #below
                         if (x+1)<np.size(pik,0):
                             umrfj += pik[x+1,y,z,j] #above
+                          # TODO: add z if statement
                         umrfAtIndex += umrfj * G[k, j]
                     umrf[x, y, z] = umrfAtIndex #umrf over all j
 
