@@ -1,29 +1,37 @@
 #! /usr/bin/python
 import numpy as np
+import numpy as N
 import os
-import nibabel as nib
 from scipy.stats import norm
 from PIL import Image
+from nifti import *
+# import nibabel as nib
+from pylab import *
 
 # TODO: I/O, 3rd dim, uMRF
+path = '/home/smorrell/git/ipmi/MPHGB06_coursework_part'
+path_in = path + '1/images/'
+path_out_ff = path + '1/out_ff/'
+
 def read_file(filename):
-  imagefile = Image.open(filename)
-  image_array = np.array(imagefile.getdata(), np.uint8).reshape(imagefile.size[1], imagefile.size[0])
+  imagefile = NiftiImage(filename)
+  image_array = imagefile.asarray()
   return image_array.astype('float32')
 
-
-def array_to_image(array):
-  minimal_value = np.min(array)
-  maximal_value = np.max(array)
-  if minimal_value < 0 or maximal_value > 255:
-    array = 255 * (array - minimal_value) / (maximal_value - minimal_value)
-  array_uint8 = array.astype('uint8')
-  return Image.fromarray(array_uint8, 'L')
-
+# def array_to_image(array):
+#   minimal_value = np.min(array)
+#   maximal_value = np.max(array)
+#   if minimal_value < 0 or maximal_value > 255:
+#     array = 255 * (array - minimal_value) / (maximal_value - minimal_value)
+#   array_uint8 = array.astype('uint8')
+#   return Image.fromarray(array_uint8, 'L')
 
 def save_file(array, filename):
-  imagefile = array_to_image(array)
-  imagefile.save(filename)
+  # coord_transform = np.eye(4)  # TODO: do we need a transform?
+  nim = NiftiImage(array)
+  nim.save(filename)
+  # imagefile = array_to_image(array)  # TODO: do we need to normalise?
+  # imagefile.save(filename)
 
 def uMRF (pik, k):
   """Calcualtes the Markov Random Field for the whole image for one class k of the central pixel
@@ -56,13 +64,12 @@ def uMRF (pik, k):
         umrf[x, y, z] = umrfAtPixel
   return umrf
 
-print "Loading data"
-# imgData = read_file("EM_Lecture/brain_noise.png")  # _bias
-imgData = read_file('/Users/stephenmorrell/Downloads/MPHGB06_coursework_part1/images/4335_F_71.80_HC_267759.nii.gz')
-
+file_name = '1056_F_71.22_AD_60740.nii'
+print "Loading image", file_name
+imgData = read_file(path_in + file_name)
 # Priors
-image_prior = read_file('average_priors' + filename + '.nii')
-image_prior[image_prior==0] = 10**-7
+image_prior = read_file(path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name)
+image_prior[image_prior == 0] = 10**-7
 # GM_Prior = read_file("EM_Lecture/GM_prior.png")
 # WM_Prior = read_file("EM_Lecture/WM_prior.png")
 # CSF_Prior = read_file("EM_Lecture/CSF_prior.png")

@@ -8,7 +8,7 @@ from pylab import *
 # ref_image = '/home/smorrell/Dropbox/PhD/IPMI/ipmicoursew/MPHGB06_coursework_part1/images/1056_F_71.22_AD_60740.nii'
 import subprocess
 import os
-path = '/home/smorrell/Dropbox/PhD/IPMI/ipmicoursew/MPHGB06_coursework_part'
+path = '/home/smorrell/git/ipmi/MPHGB06_coursework_part'
 path_in = path + '1/images/'
 path_ave = path + '2/average/'
 path_out_rigid = path + '1/out_rigid/'
@@ -34,24 +34,6 @@ def linear_registrations():
             ' -aff ' + path_out_rigid + 'ref_t_flo_p_affine_matrix' + file_name[:-4] + '.txt'
     by_my_irroyal(command)
 
-def show_images():
-  file_name = os.listdir(path_in)[0]
-  nim = NiftiImage(path_in+file_name)
-  print 'first subject', nim.header['dim']
-  imshow(nim.data[90], interpolation='nearest')  #, cmap=cm.grey)  # slice through the vertical axis
-  show()
-  print 'transformed image'
-  transf = NiftiImage(path_out_rigid + 'ref_t_flo_p_affine_result' + file_name)
-  imshow(nim.data[90], interpolation='nearest')  #, cmap=cm.grey)  # slice through the vertical axis
-  show()
-  template = NiftiImage(path_ave + 'average_template.nii')
-  print 'tissue map average template'
-  imshow(template.data[90], interpolation='nearest')  #, cmap=cm.grey)  # slice through the vertical axis
-  show()
-
-def make_difference_images():
-  pass
-
 def non_linear_registration():
   for file_name in os.listdir(path_in):
     command = 'reg_f3d -ref ' + path_in + file_name + \
@@ -70,6 +52,24 @@ def resample_priors():
 #	-trans Filename of the file containing the transformation parametrisation (from reg_aladin, reg_f3d or reg_transform)
     by_my_irroyal(command)
 
+def show_images():
+  file_name = os.listdir(path_in)[0]
+  nim = NiftiImage(path_in+file_name)
+  print 'first subject', nim.header['dim']
+  imshow(nim.data[90], interpolation='nearest')  #, cmap=cm.grey)  # slice through the vertical axis
+  show()
+  print 'transformed image'
+  transf = NiftiImage(path_out_rigid + 'ref_t_flo_p_affine_result' + file_name)
+  imshow(nim.data[90], interpolation='nearest')  #, cmap=cm.grey)  # slice through the vertical axis
+  show()
+  template = NiftiImage(path_ave + 'average_template.nii')
+  print 'tissue map average template'
+  imshow(template.data[90], interpolation='nearest')  #, cmap=cm.grey)  # slice through the vertical axis
+  show()
+
+def make_difference_images():
+  pass
+
 if __name__ == '__main__':
   # linear_registrations()
   # show_images()
@@ -77,14 +77,14 @@ if __name__ == '__main__':
   resample_priors()
 
 # dims: ndim, x, y, z, t, u, v, w axis.  reversed.
-# print nim.filename
-# nim.setFilename()
+# print imgData.filename
+# imgData.setFilename()
 # noise = N.random.randn(100, 16, 32, 32)
-# nim = NiftiImage(noise)
+# imgData = NiftiImage(noise)
 # nim1 = NiftiImage(ref_image)
 # print nim1.header['dim']
-# print nim.header['datatype']  == 64  # nifticlib.NIFTI_TYPE_FLOAT64
-# nim.save('/home/smorrell/Dropbox/PhD/IPMI/ipmicoursew/MPHGB06_coursework_part1/images/noise.nii.gz')
-# nim2 = NiftiImage(nim.data[:10], nim.header)
+# print imgData.header['datatype']  == 64  # nifticlib.NIFTI_TYPE_FLOAT64
+# imgData.save('/home/smorrell/Dropbox/PhD/IPMI/ipmicoursew/MPHGB06_coursework_part1/images/noise.nii.gz')
+# nim2 = NiftiImage(imgData.data[:10], imgData.header)
 # nim2.save('/home/smorrell/Dropbox/PhD/IPMI/ipmicoursew/MPHGB06_coursework_part1/images/part.hdr.gz')
-# imshow(nim.data[::-1, :, 90], interpolation='nearest')  # slice through the z (front to back) axis x = 90
+# imshow(imgData.data[::-1, :, 90], interpolation='nearest')  # slice through the z (front to back) axis x = 90

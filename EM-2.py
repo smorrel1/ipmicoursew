@@ -16,12 +16,12 @@ def read_file(data_path, image_name):
     return image_array.astype('float32')
 
 def array_to_image(array):
-    minimal_value = np.min(array)
-    maximal_value = np.max(array)
-    if minimal_value < 0 or maximal_value > 255:
-        array = 255*(array-minimal_value)/(maximal_value-minimal_value)
-    array_uint8 = array.astype('uint8')
-    return Image.fromarray(array_uint8, 'L')
+  minimal_value = np.min(array)
+  maximal_value = np.max(array)
+  if minimal_value < 0 or maximal_value > 255:
+    array = 255 * (array - minimal_value) / (maximal_value - minimal_value)
+  array_uint8 = array.astype('uint8')
+  return Image.fromarray(array_uint8, 'L')
 
 def save_file(array,filename):
     coordinate_transform = np.eye(4)
