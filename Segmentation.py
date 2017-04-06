@@ -12,12 +12,21 @@ from pylab import *
 path = '/home/smorrell/git/ipmi/MPHGB06_coursework_part'
 path_in = path + '1/images/'
 path_out_ff = path + '1/out_ff/'
+path_out_priors = path + '1/out_priors/'  # transformed priors
+path_seg = path + '1/seg/'                # segmented images
 
 def read_file(filename):
   imagefile = NiftiImage(filename)
   image_array = imagefile.asarray()
+  if image_array.ndim == 3:
+    np.transpose(image_array, (2, 1, 0))
+  elif image_array.ndim == 4:
+    np.transpose(image_array, (3, 2, 1, 0))
+  else:
+    np.transpose(image_array, (4, 3, 2, 1, 0))
   return image_array.astype('float32')
 
+  # TODO: check image scaling
 # def array_to_image(array):
 #   minimal_value = np.min(array)
 #   maximal_value = np.max(array)
@@ -68,7 +77,7 @@ file_name = '1056_F_71.22_AD_60740.nii'
 print "Loading image", file_name
 imgData = read_file(path_in + file_name)
 # Priors
-image_prior = read_file(path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name)
+image_prior = read_file(path_out_priors + 'propagated_priors_' + file_name)  # dims:
 image_prior[image_prior == 0] = 10**-7
 # GM_Prior = read_file("EM_Lecture/GM_prior.png")
 # WM_Prior = read_file("EM_Lecture/WM_prior.png")
@@ -79,53 +88,67 @@ didNotConverge = 1
 numclass = 4
 
 # Allocate space for the posteriors
-classProb = np.ndarray([np.size(imgData, 0), np.size(imgData, 1), numclass])  # r x c x 4
-classProbSum = np.ndarray([np.size(imgData, 0), np.size(imgData, 1)])  # r x c
+classProb = np.ndarray([np.size(imgData, 0), np.size(imgData, 1), np.size(imgData, 2), numclass])  # [x, y, z, 4]
+classProbSum = np.ndarray([np.size(imgData, 0), np.size(imgData, 1), np.size(imgData, 2)])  # [x, y, z]
 
 # Allocate space for the priors if using them
-classPrior = np.ndarray([np.size(imgData, 0), np.size(imgData, 1), 4])       # r x c x 4
+# classPrior = np.ndarray([np.size(imgData, 0), np.size(imgData, 1), 4])       # r x c x 4
 # classPrior = np.ones((np.size(imgData, 0), np.size(imgData,1)))
 # classPrior2 = np.ones(np.size(imgData,0))
-classPrior[:, :, 0] = GM_Prior/255
-classPrior[:, :, 1] = WM_Prior/255
-classPrior[:, :, 2] = CSF_Prior/255
-classPrior[:, :, 3] = Other_Prior/255
+# classPrior[:, :, 0] = GM_Prior/255
+# classPrior[:, :, 1] = WM_Prior/255
+# classPrior[:, :, 2] = CSF_Prior/255
+# classPrior[:, :, 3] = Other_Prior/255
 
 # initialise mean and variances
-# mean = np.random.rand(numclass, 1) * 256  # 4x1
-mean = np.reshape(np.mean(classPrior, (0, 1)), [4, 1]) * 256 + 100  # why does +100 increase convergence?
+mean = np.zeros(numclass)
+var = np.zeros(numclass)
+for classIndex in range(0, numclass):
+  pik = image_prior[:, :, :, classIndex]  # pik is the probability of pixel i being in class k (like fuzzy sets)
+  mean[classIndex] = np.sum(pik*imgData)/np.sum(pik)  # pik is [4, 182, 218] and imgData is [182, 218, 182]
+  var[classIndex] = np.sum(pik * ((imgData - mean[classIndex])**2)) / np.sum(pik)
+# mean = np.reshape(np.mean(classPrior, (0, 1)), [4, 1]) * 256 + 100  # why does +100 increase convergence?
 # var = (np.random.rand(numclass, 1) * 10) + 200
-var = (np.var(classPrior, (0, 1)) * 10) + 200
 
 logLik = -1000000000
 oldLogLik = -1000000000
-iteration = 0
+
+# Initialise MRF
+beta = 0.5
+MRF = np.ones([np.size(imgData, 0), np.size(imgData, 1), np.size(imgData, 2), numclass])
 
 # Iterative process
+iteration = 0
 while didNotConverge:
   iteration += 1
 
   # Expectation
-  classProbSum[:, :] = 0;
+  classProbSum[:, :, :] = 0
   for classIndex in range(0, numclass):
-    # for MRF, replace classPrior below with pi exp(-beta*Umrf()) / normalising term
-    gaussPdf = norm.pdf(imgData - mean[classIndex], scale=np.sqrt(var[classIndex])) * classPrior[:, :, classIndex]
-    classProb[:, :, classIndex] = gaussPdf
-    classProbSum[:, :] += gaussPdf
+    gaussPdf = norm.pdf(imgData - mean[classIndex], scale=np.sqrt(var[classIndex])) * image_prior[:, :, :, classIndex]
+    # = f(yi|zi=ek, phi) = G(yi-muk)
+    gaussPdf2 = 1/np.sqrt(2*np.pi*var[classIndex])*np.exp(-(imgData-mean[classIndex])**2/(2*var[classIndex])) \
+                * image_prior[:, :, :, classIndex]
+    assert abs( gaussPdf - gaussPdf2) < 0.00001
+    # include factors for f(zi = ek): pi = image_prior and MRF = exp(-beta*Umrf()) / normalising term
+    classProb[:, :, :, classIndex] = gaussPdf * image_prior[:, :, :, classIndex] * MRF[:, :, :, classIndex]  # slide 60
+    classProbSum[:, :, :] += classProb[:, :, :, classIndex]
+  classProbSum[classProbSum <= 0] = 10**-7
 
   # normalise posterior
   for classIndex in range(0, numclass):
-    classProb[:, :, classIndex] = classProb[:, :, classIndex] / classProbSum[:, :]
+    classProb[:, :, :, classIndex] = classProb[:, :, :, classIndex] / classProbSum[:, :, :]
 
   # Cost function
   oldLogLik = logLik
   logLik = np.sum(np.log(classProbSum))  # slide 47 equation 2
 
-  # Maximization
+  # Maximization slide 46
   for classIndex in range(0, numclass):
-    pik = classProb[:, :, classIndex]
+    pik = classProb[:, :, :, classIndex]
     mean[classIndex] = np.sum(pik*imgData) / np.sum(pik)
-    var[classIndex]  = np.sum(pik*(imgData-mean[classIndex])**2) / np.sum(pik)
+    var[classIndex] = np.sum(pik*(imgData-mean[classIndex])**2) / np.sum(pik)
+    MRF[:, :, :, classIndex] = np.exp(-beta * uMRF(pik, classIndex))
 
     print str(classIndex) + " = " + str(mean[classIndex]) + " , " + str(var[classIndex])
 
@@ -135,7 +158,5 @@ while didNotConverge:
       didNotConverge = 0
 
 print iteration
-save_file(classProb[:, :, 0] * 255, "seg0.png")
-save_file(classProb[:, :, 1] * 255, "seg1.png")
-save_file(classProb[:, :, 2] * 255, "seg2.png")
-save_file(classProb[:, :, 3] * 255, "seg3.png")
+for classIndex in range(0, numclass):
+  NiftiImage(classProb[:, :, :, classIndex]*255).save(path_seg+str(classIndex)+file_name)

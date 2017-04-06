@@ -14,6 +14,7 @@ path_ave = path + '2/average/'
 path_out_rigid = path + '1/out_rigid/'
 path_out_ff = path + '1/out_ff/'
 path_out_labels = path + '1/out_labels/'
+path_out_priors = path + '1/out_priors/'
 
 def by_my_irroyal(command):
   with open('test.log', 'w') as f:
@@ -47,7 +48,7 @@ def non_linear_registration():
 def resample_priors():
   for file_name in os.listdir(path_in):
     command = 'reg_resample -ref ' + path_in + file_name + ' -flo ' + path_ave + 'average_priors.nii' + \
-              ' -res ' + path_out_labels + 'propagated_labels' + file_name + \
+              ' -res ' + path_out_priors + 'propagated_priors' + file_name + \
               ' -trans ' + path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name + ' -inter 0'
 #	-trans Filename of the file containing the transformation parametrisation (from reg_aladin, reg_f3d or reg_transform)
     by_my_irroyal(command)

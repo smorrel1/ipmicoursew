@@ -87,9 +87,9 @@ classProb[classProb == 0] = 10**-20
 mean = np.zeros(numclass);
 var= np.zeros(numclass);
 for classIndex in range(0, numclass):
-        pik = image_Prior[:,:,:,classIndex]
-        mean[classIndex] = np.sum(pik*imgData)/np.sum(pik)
-        var[classIndex] = np.sum(pik * ((imgData - mean[classIndex])**2))/np.sum(pik)
+  pik = image_Prior[:,:,:,classIndex]
+  mean[classIndex] = np.sum(pik*imgData)/np.sum(pik)
+  var[classIndex] = np.sum(pik * ((imgData - mean[classIndex])**2))/np.sum(pik)
 
 # Initial log likelihood
 logLik=-1000000000
@@ -103,33 +103,35 @@ MRF[:,:,:,:] = 1
 ## Iterative process
 iteration=0
 while didNotConverge:
-    iteration=iteration+1
-    
-    # Expectation
-    classProbSum[:, :] = 0;
-    for classIndex in range(0, numclass):
-        gaussPdf = 1/np.sqrt(2*np.pi*var[classIndex]) * np.exp(-(imgData - mean[classIndex])**2/(2*var[classIndex])) 
+  iteration=iteration+1
+
+  # Expectation
+  classProbSum[:, :] = 0;
+  for classIndex in range(0, numclass):
+        gaussPdf = 1/np.sqrt(2*np.pi*var[classIndex]) * np.exp(-(imgData - mean[classIndex])**2/(2*var[classIndex]))
         #np.sqrt is an element-wise opperator
         classProb[:, :, :, classIndex] = gaussPdf * image_Prior[:,:,:,classIndex] * MRF[:,:,:,classIndex]
         classProbSum[:, :,:] = classProbSum[:, :,:] + classProb[:, :, :, classIndex]
-    classProbSum[classProbSum == 0] = 10**-7 
-    classProbSum[classProbSum < 0] = 10**-7 
-    # normalise posterior ( = pik, not stores as a new variable in order to save memory)
-    for classIndex in range(0, numclass):
+  classProbSum[classProbSum == 0] = 10**-7
+  classProbSum[classProbSum < 0] = 10**-7
+
+  # normalise posterior
+  #  ( = pik, not stores as a new variable in order to save memory)
+  for classIndex in range(0, numclass):
         classProb[:, :, :, classIndex] = classProb[:,:,:,classIndex]/classProbSum[:,:,:] #starts dividing by zero here which gives runtime warning
-    classProb[classProb == 0] = 10**-7
-    # Cost function
-    oldLogLik = logLik
-    logLik = np.sum(np.log(classProbSum)) # sum over all elements
+  classProb[classProb == 0] = 10**-7
+  # Cost function
+  oldLogLik = logLik
+  logLik = np.sum(np.log(classProbSum)) # sum over all elements
 
-    # Maximization
-    for classIndex in range(0, numclass):
-        pik = classProb[:,:,:,classIndex]
-        mean[classIndex] = np.sum(pik*imgData)/np.sum(pik)
-        var[classIndex] = np.sum(pik * ((imgData - mean[classIndex])**2))/np.sum(pik)
-        MRF[:,:,:,classIndex] = np.exp(-beta * uMRF(classProb, classIndex))
+  # Maximization
+  for classIndex in range(0, numclass):
+    pik = classProb[:,:,:,classIndex]
+    mean[classIndex] = np.sum(pik*imgData)/np.sum(pik)
+    var[classIndex] = np.sum(pik * ((imgData - mean[classIndex])**2))/np.sum(pik)
+    MRF[:,:,:,classIndex] = np.exp(-beta * uMRF(classProb, classIndex))
 
-        print(str(classIndex)+" = "+str(mean[classIndex])+" , "+str(var[classIndex]))
+    print(str(classIndex)+" = "+str(mean[classIndex])+" , "+str(var[classIndex]))
 
 
     if iteration>1:#change this back to greater than ten
