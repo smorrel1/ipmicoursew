@@ -2,28 +2,24 @@
 import numpy as np
 import numpy as N
 import os
-from scipy.stats import norm
+# from scipy.stats import norm
+import scipy.stats
 from PIL import Image
 from nifti import *
 # import nibabel as nib
 from pylab import *
 
 # TODO: I/O, 3rd dim, uMRF
-path = '/home/smorrell/git/ipmicoursew/MPHGB06_coursework_part'
+path = '/home/smorrell/git/ipmi/MPHGB06_coursework_part'
 path_in = path + '1/images/'
 path_out_ff = path + '1/out_ff/'
 path_out_priors = path + '1/out_priors/'  # transformed priors
 path_seg = path + '1/seg/'                # segmented images
-
+# pik is the probability of pixel i being in class k (like fuzzy sets) ndims=4, [x, y, z, k]
 def read_file(filename):
   imagefile = NiftiImage(filename)
   image_array = imagefile.asarray()
-  if image_array.ndim == 3:
-    np.transpose(image_array, (2, 1, 0))
-  elif image_array.ndim == 4:
-    np.transpose(image_array, (3, 2, 1, 0))
-  else:
-    np.transpose(image_array, (4, 3, 2, 1, 0))
+  image_array = np.transpose(image_array)
   return image_array.astype('float32')
 
   # TODO: check image scaling
@@ -44,23 +40,25 @@ def save_file(array, filename):
 
 def uMRF (pik, k):
   """Calcualtes the Markov Random Field for the whole image for one class k of the central pixel
-  Args: pik: class probability per pixel for whole image with dims [x, y, z, numclass]
+  Args: 
+    pik: class probability per pixel for whole image with dims [x, y, z, numclass]
+    k: the class of the central pixel. uMRF calculates the prior for this class. 
   For each pixel (outer 3 lops) we sum the class probs by neighbour & central class into a matrix then * G
   Returns: 
   G energy matrix. penalty for being near pixels. I.e. different = 1, same = 0.  
   Horizontal axis is class j of neighbour. Vertical axis is class k of central pixel."""
-  G = np.ones(6, 6) - np.eye(6)
+  G = np.ones([6, 6]) - np.eye(6)
   umrf = np.ndarray([np.size(pik, 0), np.size(pik, 1), np.size(pik, 2)])
   for x in range(0, np.size(pik, 0)):
     for y in range(0, np.size(pik, 1)):
       for z in range(0, np.size(pik, 2)):
         umrfAtPixel = 0
-        for j in range(0, numclass):  # for the class of each neighbouring pixel
+        for j in range(0, numclass):  # slide 4.53 outer sum over classes of neighbouring pixels
           umrfj = 0
-          if x > 0:
+          if x > 0:  # inner sum over neighbours
             umrfj += pik[x-1, y, z, j]
           if x+1 < np.size(pik, 0):
-            umrfj += pik[x+1, y, j, j]
+            umrfj += pik[x+1, y, z, j]
           if y > 0:
             umrfj += pik[x, y-1, z, j]
           if y+1 < np.size(pik, 1):
@@ -68,7 +66,7 @@ def uMRF (pik, k):
           if z > 0:
             umrfj += pik[x, y, z-1, j]
           if z+1 < np.size(pik, 2):
-            umrfj += pik[x, y, z+1]
+            umrfj += pik[x, y, z+1, j]
           umrfAtPixel += umrfj * G[k, j]
         umrf[x, y, z] = umrfAtPixel
   return umrf
@@ -104,9 +102,10 @@ classProbSum = np.ndarray([np.size(imgData, 0), np.size(imgData, 1), np.size(img
 mean = np.zeros(numclass)
 var = np.zeros(numclass)
 for classIndex in range(0, numclass):
-  pik = image_prior[:, :, :, classIndex]  # pik is the probability of pixel i being in class k (like fuzzy sets)
+  pik = image_prior[:, :, :, classIndex]  # here pik just for one class, restored below
   mean[classIndex] = np.sum(pik*imgData)/np.sum(pik)  # pik is [4, 182, 218] and imgData is [182, 218, 182]
   var[classIndex] = np.sum(pik * ((imgData - mean[classIndex])**2)) / np.sum(pik)
+pik = image_prior
 # mean = np.reshape(np.mean(classPrior, (0, 1)), [4, 1]) * 256 + 100  # why does +100 increase convergence?
 # var = (np.random.rand(numclass, 1) * 10) + 200
 
@@ -125,11 +124,11 @@ while didNotConverge:
   # Expectation
   classProbSum[:, :, :] = 0
   for classIndex in range(0, numclass):
-    gaussPdf = norm.pdf(imgData - mean[classIndex], scale=np.sqrt(var[classIndex])) * image_prior[:, :, :, classIndex]
+    gaussPdf = scipy.stats.norm.pdf(imgData - mean[classIndex], scale=np.sqrt(var[classIndex])) * image_prior[:, :, :, classIndex]
     # = f(yi|zi=ek, phi) = G(yi-muk)
     gaussPdf2 = 1/np.sqrt(2*np.pi*var[classIndex])*np.exp(-(imgData-mean[classIndex])**2/(2*var[classIndex])) \
                 * image_prior[:, :, :, classIndex]
-    assert abs( gaussPdf - gaussPdf2) < 0.00001
+    assert abs(gaussPdf - gaussPdf2).max() < 10**-8  # implementation check
     # include factors for f(zi = ek): pi = image_prior and MRF = exp(-beta*Umrf()) / normalising term
     classProb[:, :, :, classIndex] = gaussPdf * image_prior[:, :, :, classIndex] * MRF[:, :, :, classIndex]  # slide 60
     classProbSum[:, :, :] += classProb[:, :, :, classIndex]
@@ -147,8 +146,8 @@ while didNotConverge:
   for classIndex in range(0, numclass):
     pik = classProb[:, :, :, classIndex]
     mean[classIndex] = np.sum(pik*imgData) / np.sum(pik)
-    var[classIndex] = np.sum(pik*(imgData-mean[classIndex])**2) / np.sum(pik)
-    MRF[:, :, :, classIndex] = np.exp(-beta * uMRF(pik, classIndex))
+    var[classIndex] = np.sum(pik * (imgData - mean[classIndex])**2) / np.sum(pik)
+    MRF[:, :, :, classIndex] = np.exp(-beta * uMRF(classProb, classIndex))
 
     print str(classIndex) + " = " + str(mean[classIndex]) + " , " + str(var[classIndex])
 
