@@ -1,13 +1,13 @@
 #! /usr/bin/python
-import numpy as np
 import numpy as N
+import numpy as np
 import os
-# from scipy.stats import norm
 import scipy.stats
 from PIL import Image
 from nifti import *
 # import nibabel as nib
 from pylab import *
+# import time as timer
 
 # TODO: I/O, 3rd dim, uMRF
 path = '/home/smorrell/git/ipmi/MPHGB06_coursework_part'
@@ -15,7 +15,16 @@ path_in = path + '1/images/'
 path_out_ff = path + '1/out_ff/'
 path_out_priors = path + '1/out_priors/'  # transformed priors
 path_seg = path + '1/seg/'                # segmented images
+
+# VARIABLES
 # pik is the probability of pixel i being in class k (like fuzzy sets) ndims=4, [x, y, z, k]
+# timepoint = timer.time()
+# def bootlog(msg):
+#   global timepoint
+#   timegap = timer.time() - timepoint
+#   timepoint = timer.time()
+#   print(" * %s - %f " % (msg, timegap))
+
 def read_file(filename):
   imagefile = NiftiImage(filename)
   image_array = imagefile.asarray()
@@ -99,6 +108,7 @@ classProbSum = np.ndarray([np.size(imgData, 0), np.size(imgData, 1), np.size(img
 # classPrior[:, :, 3] = Other_Prior/255
 
 # initialise mean and variances
+bootlog('initialising')
 mean = np.zeros(numclass)
 var = np.zeros(numclass)
 for classIndex in range(0, numclass):
@@ -120,7 +130,7 @@ MRF = np.ones([np.size(imgData, 0), np.size(imgData, 1), np.size(imgData, 2), nu
 iteration = 0
 while didNotConverge:
   iteration += 1
-
+  # bootlog('iteration ' + str(iteration))
   # Expectation
   classProbSum[:, :, :] = 0
   for classIndex in range(0, numclass):
@@ -149,11 +159,13 @@ while didNotConverge:
     var[classIndex] = np.sum(pik * (imgData - mean[classIndex])**2) / np.sum(pik)
     MRF[:, :, :, classIndex] = np.exp(-beta * uMRF(classProb, classIndex))
 
-    print str(classIndex) + " = " + str(mean[classIndex]) + " , " + str(var[classIndex])
+    print 'for class ' + str(classIndex) + ', mean = ' + str(mean[classIndex]) + ', var = ' + str(var[classIndex]), \
+          'Log likelihood ' + str(logLik)
 
   if logLik < oldLogLik:
       didNotConverge = 0
   if np.isnan(np.sum(mean)):
+      print 'NaN error'
       didNotConverge = 0
 
 print iteration
