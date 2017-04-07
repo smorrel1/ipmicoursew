@@ -7,9 +7,9 @@ from PIL import Image
 from nifti import *
 # import nibabel as nib
 from pylab import *
-# import time as timer
+from time import time
 
-# TODO: I/O, 3rd dim, uMRF
+# Constants
 path = '/home/smorrell/git/ipmi/MPHGB06_coursework_part'
 path_in = path + '1/images/'
 path_out_ff = path + '1/out_ff/'
@@ -18,12 +18,12 @@ path_seg = path + '1/seg/'                # segmented images
 
 # VARIABLES
 # pik is the probability of pixel i being in class k (like fuzzy sets) ndims=4, [x, y, z, k]
-# timepoint = timer.time()
-# def bootlog(msg):
-#   global timepoint
-#   timegap = timer.time() - timepoint
-#   timepoint = timer.time()
-#   print(" * %s - %f " % (msg, timegap))
+timepoint = time()
+def bootlog(msg):
+  global timepoint
+  timegap = time() - timepoint
+  timepoint = time()
+  print(" * %s - %f " % (msg, timegap))
 
 def read_file(filename):
   imagefile = NiftiImage(filename)
@@ -41,7 +41,8 @@ def read_file(filename):
 #   return Image.fromarray(array_uint8, 'L')
 
 def save_file(array, filename):
-  # coord_transform = np.eye(4)  # TODO: do we need a transform?
+  # coord_transform = np.eye(4)  # TODO: is the transform the same as np.transpose?
+  array = np.transpose(array)
   nim = NiftiImage(array)
   nim.save(filename)
   # imagefile = array_to_image(array)  # TODO: do we need to normalise?
@@ -80,94 +81,82 @@ def uMRF (pik, k):
         umrf[x, y, z] = umrfAtPixel
   return umrf
 
-file_name = '1056_F_71.22_AD_60740.nii'
-print "Loading image", file_name
-imgData = read_file(path_in + file_name)
-# Priors
-image_prior = read_file(path_out_priors + 'propagated_priors_' + file_name)  # dims:
-image_prior[image_prior == 0] = 10**-7
-# GM_Prior = read_file("EM_Lecture/GM_prior.png")
-# WM_Prior = read_file("EM_Lecture/WM_prior.png")
-# CSF_Prior = read_file("EM_Lecture/CSF_prior.png")
-# Other_Prior = read_file("EM_Lecture/NonBrain_prior.png")
+# file_name = '1056_F_71.22_AD_60740.nii'
+# file_name = '1221_M_71.27_AD_48975.nii'
+for file_name in os.listdir(path_in):
+  print "Loading image", file_name
+  imgData = read_file(path_in + file_name)
+  # Priors
+  image_prior = read_file(path_out_priors + 'propagated_priors_' + file_name)  # dims:
+  image_prior[image_prior == 0] = 10**-7
 
-didNotConverge = 1
-numclass = 4
+  didNotConverge = 1
+  numclass = 4
 
-# Allocate space for the posteriors
-classProb = np.ndarray([np.size(imgData, 0), np.size(imgData, 1), np.size(imgData, 2), numclass])  # [x, y, z, 4]
-classProbSum = np.ndarray([np.size(imgData, 0), np.size(imgData, 1), np.size(imgData, 2)])  # [x, y, z]
+  # Allocate space for the posteriors
+  classProb = np.ndarray([np.size(imgData, 0), np.size(imgData, 1), np.size(imgData, 2), numclass])  # [x, y, z, 4]
+  classProbSum = np.ndarray([np.size(imgData, 0), np.size(imgData, 1), np.size(imgData, 2)])  # [x, y, z]
 
-# Allocate space for the priors if using them
-# classPrior = np.ndarray([np.size(imgData, 0), np.size(imgData, 1), 4])       # r x c x 4
-# classPrior = np.ones((np.size(imgData, 0), np.size(imgData,1)))
-# classPrior2 = np.ones(np.size(imgData,0))
-# classPrior[:, :, 0] = GM_Prior/255
-# classPrior[:, :, 1] = WM_Prior/255
-# classPrior[:, :, 2] = CSF_Prior/255
-# classPrior[:, :, 3] = Other_Prior/255
 
-# initialise mean and variances
-bootlog('initialising')
-mean = np.zeros(numclass)
-var = np.zeros(numclass)
-for classIndex in range(0, numclass):
-  pik = image_prior[:, :, :, classIndex]  # here pik just for one class, restored below
-  mean[classIndex] = np.sum(pik*imgData)/np.sum(pik)  # pik is [4, 182, 218] and imgData is [182, 218, 182]
-  var[classIndex] = np.sum(pik * ((imgData - mean[classIndex])**2)) / np.sum(pik)
-pik = image_prior
-# mean = np.reshape(np.mean(classPrior, (0, 1)), [4, 1]) * 256 + 100  # why does +100 increase convergence?
-# var = (np.random.rand(numclass, 1) * 10) + 200
-
-logLik = -1000000000
-oldLogLik = -1000000000
-
-# Initialise MRF
-beta = 0.5
-MRF = np.ones([np.size(imgData, 0), np.size(imgData, 1), np.size(imgData, 2), numclass])
-
-# Iterative process
-iteration = 0
-while didNotConverge:
-  iteration += 1
-  # bootlog('iteration ' + str(iteration))
-  # Expectation
-  classProbSum[:, :, :] = 0
+  # initialise mean and variances
+  bootlog('initialising')
+  mean = np.zeros(numclass)
+  var = np.zeros(numclass)
   for classIndex in range(0, numclass):
-    gaussPdf = scipy.stats.norm.pdf(imgData - mean[classIndex], scale=np.sqrt(var[classIndex])) * image_prior[:, :, :, classIndex]
-    # = f(yi|zi=ek, phi) = G(yi-muk)
-    gaussPdf2 = 1/np.sqrt(2*np.pi*var[classIndex])*np.exp(-(imgData-mean[classIndex])**2/(2*var[classIndex])) \
-                * image_prior[:, :, :, classIndex]
-    assert abs(gaussPdf - gaussPdf2).max() < 10**-8  # implementation check
-    # include factors for f(zi = ek): pi = image_prior and MRF = exp(-beta*Umrf()) / normalising term
-    classProb[:, :, :, classIndex] = gaussPdf * image_prior[:, :, :, classIndex] * MRF[:, :, :, classIndex]  # slide 60
-    classProbSum[:, :, :] += classProb[:, :, :, classIndex]
-  classProbSum[classProbSum <= 0] = 10**-7
+    pik = image_prior[:, :, :, classIndex]  # here pik just for one class, restored below
+    mean[classIndex] = np.sum(pik*imgData)/np.sum(pik)  # pik is [4, 182, 218] and imgData is [182, 218, 182]
+    var[classIndex] = np.sum(pik * ((imgData - mean[classIndex])**2)) / np.sum(pik)
+  pik = image_prior
+  # mean = np.reshape(np.mean(classPrior, (0, 1)), [4, 1]) * 256 + 100  # why does +100 increase convergence?
+  # var = (np.random.rand(numclass, 1) * 10) + 200
 
-  # normalise posterior
-  for classIndex in range(0, numclass):
-    classProb[:, :, :, classIndex] = classProb[:, :, :, classIndex] / classProbSum[:, :, :]
+  logLik = -1000000000
+  oldLogLik = -1000000000
 
-  # Cost function
-  oldLogLik = logLik
-  logLik = np.sum(np.log(classProbSum))  # slide 47 equation 2
+  # Initialise MRF
+  beta = 0.5
+  MRF = np.ones([np.size(imgData, 0), np.size(imgData, 1), np.size(imgData, 2), numclass])
 
-  # Maximization slide 46
-  for classIndex in range(0, numclass):
-    pik = classProb[:, :, :, classIndex]
-    mean[classIndex] = np.sum(pik*imgData) / np.sum(pik)
-    var[classIndex] = np.sum(pik * (imgData - mean[classIndex])**2) / np.sum(pik)
-    MRF[:, :, :, classIndex] = np.exp(-beta * uMRF(classProb, classIndex))
+  # Iterative process
+  iteration = 0
+  while didNotConverge:
+    iteration += 1
+    # bootlog('iteration ' + str(iteration))
+    # Expectation
+    classProbSum[:, :, :] = 0
+    for classIndex in range(0, numclass):
+      gaussPdf = scipy.stats.norm.pdf(imgData - mean[classIndex], scale=np.sqrt(var[classIndex])) * image_prior[:, :, :, classIndex]
+      # = f(yi|zi=ek, phi) = G(yi-muk)
+      gaussPdf2 = 1/np.sqrt(2*np.pi*var[classIndex])*np.exp(-(imgData-mean[classIndex])**2/(2*var[classIndex])) \
+                  * image_prior[:, :, :, classIndex]
+      assert abs(gaussPdf - gaussPdf2).max() < 10**-8  # implementation check
+      # include factors for f(zi = ek): pi = image_prior and MRF = exp(-beta*Umrf()) / normalising term
+      classProb[:, :, :, classIndex] = gaussPdf * image_prior[:, :, :, classIndex] * MRF[:, :, :, classIndex]  # slide 60
+      classProbSum[:, :, :] += classProb[:, :, :, classIndex]
+    classProbSum[classProbSum <= 0] = 10**-7
 
-    print 'for class ' + str(classIndex) + ', mean = ' + str(mean[classIndex]) + ', var = ' + str(var[classIndex]), \
-          'Log likelihood ' + str(logLik)
+    # normalise posterior
+    for classIndex in range(0, numclass):
+      classProb[:, :, :, classIndex] = classProb[:, :, :, classIndex] / classProbSum[:, :, :]
 
-  if logLik < oldLogLik:
-      didNotConverge = 0
-  if np.isnan(np.sum(mean)):
-      print 'NaN error'
-      didNotConverge = 0
+    # Cost function
+    oldLogLik = logLik
+    logLik = np.sum(np.log(classProbSum))  # slide 47 equation 2
 
-print iteration
-for classIndex in range(0, numclass):
-  NiftiImage(classProb[:, :, :, classIndex]*255).save(path_seg+str(classIndex)+file_name)
+    # Maximization slide 46
+    for classIndex in range(0, numclass):
+      pik = classProb[:, :, :, classIndex]
+      mean[classIndex] = np.sum(pik*imgData) / np.sum(pik)
+      var[classIndex] = np.sum(pik * (imgData - mean[classIndex])**2) / np.sum(pik)
+      MRF[:, :, :, classIndex] = np.exp(-beta * uMRF(classProb, classIndex))
+
+      print 'for class ' + str(classIndex) + ', mean = ' + str(mean[classIndex]) + ', var = ' + str(var[classIndex]), \
+            'Log likelihood ' + str(logLik)
+
+    if logLik < oldLogLik and iteration > 10:
+        didNotConverge = 0
+    if np.isnan(np.sum(mean)):
+        print 'NaN error at iteration ', str(iteration)
+        didNotConverge = 0
+    bootlog('finished iteration '+str(iteration))
+  save_file(classProb, path_seg+'new_seg_' + file_name)
