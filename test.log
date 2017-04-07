@@ -1,0 +1,15 @@
+
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+Command line:
+ reg_resample -ref /home/smorrell/git/ipmi/MPHGB06_coursework_part1/images/4291_F_75.68_HC_270057.nii -flo /home/smorrell/git/ipmi/MPHGB06_coursework_part2/average/average_priors.nii -res /home/smorrell/git/ipmi/MPHGB06_coursework_part1/out_priors/propagated_priors4291_F_75.68_HC_270057.nii -trans /home/smorrell/git/ipmi/MPHGB06_coursework_part1/out_ff/ref_t_flo_new_image_nrr_cpp4291_F_75.68_HC_270057.nii -inter 3
+
+Parameters
+Reference image name: /home/smorrell/git/ipmi/MPHGB06_coursework_part1/images/4291_F_75.68_HC_270057.nii
+	182x218x182 voxels, 1 volumes
+	1x1x1 mm
+Floating image name: /home/smorrell/git/ipmi/MPHGB06_coursework_part2/average/average_priors.nii
+	182x218x182 voxels, 4 volumes
+	1x1x1 mm
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+[NiftyReg] Resampled image has been saved: /home/smorrell/git/ipmi/MPHGB06_coursework_part1/out_priors/propagated_priors4291_F_75.68_HC_270057.nii
