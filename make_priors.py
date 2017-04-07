@@ -32,7 +32,7 @@ def linear_registrations():
     command = 'reg_aladin -ref ' + path_in + file_name + \
             ' -flo ' + path_ave + 'average_template.nii ' + \
             '-res ' + path_out_rigid + 'ref_t_flo_p_affine_result' + file_name + \
-            ' -aff ' + path_out_rigid + 'ref_t_flo_p_affine_matrix' + file_name[:-4] + '.txt'
+            ' -aff ' + path_out_rigid + 'ref_t_flo_p_affine_matrix' + file_name[:-4] + '.txt - gpu'
     by_my_irroyal(command)
 
 def non_linear_registration():
@@ -41,7 +41,8 @@ def non_linear_registration():
               ' -flo ' + path_ave + 'average_template.nii ' + \
               ' -res ' + path_out_ff + 'ref_t_flo_p_affine_result' + file_name + \
               ' -aff ' + path_out_rigid + 'ref_t_flo_p_affine_matrix' + file_name[:-4] + '.txt' \
-              ' -cpp ' + path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name
+              ' -cpp ' + path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name + \
+              ' -jl 0 - gpu'  # experiment with different values
               # 	-cpp <filename>		Filename of control point grid [outputCPP.nii]
     # TODO L can we initialise with the affine matrix?
     by_my_irroyal(command)
@@ -50,7 +51,7 @@ def resample_priors():
   for file_name in os.listdir(path_in):
     command = 'reg_resample -ref ' + path_in + file_name + ' -flo ' + path_ave + 'average_priors.nii' + \
               ' -res ' + path_out_priors + 'propagated_priors' + file_name + \
-              ' -trans ' + path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name + ' -inter 0'  # trans is from f3d
+              ' -trans ' + path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name + ' -inter 0 - gpu'  # trans is from f3d
 # -trans Filename of the file containing the transformation parametrisation (from reg_aladin, reg_f3d or reg_transform)
     by_my_irroyal(command)
 
@@ -58,7 +59,7 @@ def resample_labels():
   for file_name in os.listdir(path_in):
     command = 'reg_resample -ref ' + path_in + file_name + ' -flo ' + path_ave + 'average_label.nii' + \
               ' -res ' + path_out_labels + 'propagated_labels' + file_name + \
-              ' -trans ' + path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name + ' -inter 0'
+              ' -trans ' + path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name + ' -inter 0 - gpu'
     by_my_irroyal(command)
 
 def show_images():
