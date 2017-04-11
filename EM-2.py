@@ -126,12 +126,12 @@ while didNotConverge:
 
   # Maximization
   for classIndex in range(0, numclass):
-    pik = classProb[:,:,:,classIndex]
-    mean[classIndex] = np.sum(pik*imgData)/np.sum(pik)
-    var[classIndex] = np.sum(pik * ((imgData - mean[classIndex])**2))/np.sum(pik)
-    MRF[:,:,:,classIndex] = np.exp(-beta * uMRF(classProb, classIndex))
+    pik = classProb[:, :, :, classIndex]
+    mean[classIndex] = np.sum(pik*imgData) / np.sum(pik)
+    var[classIndex] = np.sum(pik * (imgData - mean[classIndex])**2) / np.sum(pik)
+    MRF[:, :, :, classIndex] = np.exp(-beta * uMRF(classProb, classIndex))
 
-    print(str(classIndex)+" = "+str(mean[classIndex])+" , "+str(var[classIndex]))
+    print (str(classIndex) + " = " + str(mean[classIndex]) + " , " + str(var[classIndex]))
 
 
     if iteration>1:#change this back to greater than ten
