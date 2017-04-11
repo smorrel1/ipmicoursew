@@ -51,7 +51,7 @@ def jacs_per_region():
   file_name = '1056_F_71.22_AD_60740.nii'
   jacobians = read_file(path_out_jac + 'jac' + file_name)
   transformed_labels = read_file(path_out_labels + 'propagated_labels' + file_name)
-  
+
   print 1
 
 if __name__ == '__main__':

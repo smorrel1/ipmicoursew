@@ -1,6 +1,7 @@
 from nifti import *
 import numpy as N
 from pylab import *
+from /home/smorrell/git/Mammo/tinymammo/src/tools/histogram.py
 # propagate the provided probabilistic tissue maps to all individual subject scans and use them as priors
 # 	-aff <filename>		Filename which contains the output affine transformation. [outputAffine.txt]
 # 	-res <filename>		Filename of the resampled image. [outputResult.nii]
@@ -15,6 +16,7 @@ path_out_rigid = path + '1/out_rigid/'
 path_out_ff = path + '1/out_ff/'
 path_out_labels = path + '1/out_labels/'
 path_out_priors = path + '1/out_priors/'
+path_out_jac = path + '1/jac/'
 
 def by_my_irroyal(command):
   with open('test.log', 'w') as f:
@@ -94,16 +96,26 @@ def show_images():
   imshow(template.data[90], interpolation='nearest')  #, cmap=cm.grey)  # slice through the vertical axis
   show()
 
+def jacobian_frequency():
+  file_name = os.listdir(path_out_jac)[0]
+  print file_name
+  nim = NiftiImage(path_out_jac + file_name)
+  print 'first subject', nim.header['dim']
+  # imshow(nim.data[90], interpolation='nearest')  #, cmap=cm.grey)  # slice through the vertical axis
+  # show()
+  print nim.asarray().shape
+
 def make_difference_images():
   pass
 
 if __name__ == '__main__':
   # linear_registrations()
   # show_images()
-  non_linear_registration()
+  # non_linear_registration()
   # resample_priors()
   # resample_labels()
-  make_jacobians()
+  # make_jacobians()
+  jacobian_frequency()
 
 # dims: ndim, x, y, z, t, u, v, w axis.  reversed.
 # print imgData.filename
