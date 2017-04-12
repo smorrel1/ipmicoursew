@@ -24,11 +24,11 @@ def plot_histogram(x, x2=None):
   plt.grid(True)
   plt.show()
 
-data = pd.read_csv('/home/smorrell/Dropbox/Dream_scripts_etc/logs-local/20170409logits.csv')
-x = data.values[:, 0]
-mu, sigma = np.average(x), np.std(x)
-x2 = data.values[:, 1]
-mu2, sigma2 = np.average(x2), np.std(x2)
-plot_histogram(x)  # , x2)
+# data = pd.read_csv('/home/smorrell/Dropbox/Dream_scripts_etc/logs-local/20170409logits.csv')
+# x = data.values[:, 0]
+# mu, sigma = np.average(x), np.std(x)
+# x2 = data.values[:, 1]
+# mu2, sigma2 = np.average(x2), np.std(x2)
+# plot_histogram(x)  # , x2)
 
 

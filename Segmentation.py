@@ -14,7 +14,7 @@ path = '/home/smorrell/git/ipmi/MPHGB06_coursework_part'
 path_in = path + '1/images/'
 path_out_ff = path + '1/out_ff/'
 path_out_priors = path + '1/out_priors/'  # transformed priors
-path_seg = path + '1/seg/'                # segmented images
+path_seg = path + '1/seg/'                # segmented images (probabilities of each class)
 
 # VARIABLES
 # pik is the probability of pixel i being in class k (like fuzzy sets) ndims=4, [x, y, z, k]
