@@ -1,7 +1,7 @@
 from nifti import *
 import numpy as N
 from pylab import *
-from /home/smorrell/git/Mammo/tinymammo/src/tools/histogram.py
+import histogram
 # propagate the provided probabilistic tissue maps to all individual subject scans and use them as priors
 # 	-aff <filename>		Filename which contains the output affine transformation. [outputAffine.txt]
 # 	-res <filename>		Filename of the resampled image. [outputResult.nii]
@@ -97,13 +97,27 @@ def show_images():
   show()
 
 def jacobian_frequency():
-  file_name = os.listdir(path_out_jac)[0]
-  print file_name
-  nim = NiftiImage(path_out_jac + file_name)
-  print 'first subject', nim.header['dim']
-  # imshow(nim.data[90], interpolation='nearest')  #, cmap=cm.grey)  # slice through the vertical axis
-  # show()
-  print nim.asarray().shape
+  i=0
+  for file_name in os.listdir(path_out_jac)[0]:
+    print file_name
+    nim = NiftiImage(path_out_jac + file_name)
+    print 'first subject', nim.header['dim']
+    # imshow(nim.data[90], interpolation='nearest')  #, cmap=cm.grey)  # slice through the vertical axis
+    # show()
+    image_data = nim.asarray()
+    values_below_zero = image_data[image_data<0]
+    count_below_zero = len(values_below_zero)
+    minimum_val = min(values_below_zero)
+    mean_val = average(values_below_zero)
+    print file_name, 'count below zero', count_below_zero, 'minimum', minimum_val, 'mean', mean_val
+    histogram.plot_histogram(image_data.flatten())
+    i += 1
+
+def ratio_gm_wm():
+  # extract for each subject the ratio between the grey matter volume and the white matter volume
+  for file_name in os.listdir(path_out_jac)[0]:
+    path_seg + 'new_seg_' + file_name
+    
 
 def make_difference_images():
   pass
