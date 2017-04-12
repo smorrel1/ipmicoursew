@@ -128,6 +128,7 @@ def ratio_gm_wm():
   i = 0
   gm = np.zeros(10)
   wm = np.zeros(10)
+  patient_data = np.zeros([20, 7])
   pd.DataFrame(columns=['age', 'gender', 'wm_vol', 'gm_vol', 'wm_over_gm', 'csf_vol', 'ic_vol' ])
   for file_name in os.listdir(path_out_jac)[0]:
     # segmented_image = Segmentation.read_file(path_seg + 'new_seg_' + file_name)
