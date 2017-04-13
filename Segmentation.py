@@ -57,7 +57,8 @@ def uMRF (pik, k):
 # file_name = '1221_M_71.27_AD_48975.nii'
 for file_name in os.listdir(path_in):
   print "Loading image", file_name
-  if file_name == 'new_seg_1221_M_71.27_AD_48975.nii':
+  if file_name in  os.listdir(path_seg):
+      # == 'new_seg_1221_M_71.27_AD_48975.nii':
     continue
   imgData = read_file(path_in + file_name)
   # Priors
