@@ -128,7 +128,7 @@ for file_name in os.listdir(path_in):
       print 'for class ' + str(classIndex) + ', mean = ' + str(mean[classIndex]) + ', var = ' + str(var[classIndex]), \
             'Log likelihood ' + str(logLik)
 
-    if logLik < oldLogLik and iteration > 10:
+    if logLik < oldLogLik + 10 and iteration > 10:
         didNotConverge = 0
     if np.isnan(np.sum(mean)):
         print 'NaN error at iteration ', str(iteration)
