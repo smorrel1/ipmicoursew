@@ -8,6 +8,7 @@ from nifti import *
 # import nibabel as nib
 from pylab import *
 from time import time
+from utils import *
 
 # Constants
 path = '/home/smorrell/git/ipmi/MPHGB06_coursework_part'
@@ -18,24 +19,6 @@ path_seg = path + '1/seg/'                # segmented images (probabilities of e
 
 # VARIABLES
 # pik is the probability of pixel i being in class k (like fuzzy sets) ndims=4, [x, y, z, k]
-timepoint = time()
-def bootlog(msg):
-  global timepoint
-  timegap = time() - timepoint
-  timepoint = time()
-  print(" * %s - %f " % (msg, timegap))
-
-def read_file(filename):
-  imagefile = NiftiImage(filename)
-  image_array = imagefile.asarray()
-  image_array = np.transpose(image_array)
-  return image_array.astype('float32')
-
-def save_file(array, filename):
-  # coord_transform = np.eye(4)  # TODO: is the transform the same as np.transpose?
-  array = np.transpose(array)
-  nim = NiftiImage(array)
-  nim.save(filename)
 
 def uMRF (pik, k):
   """Calcualtes the Markov Random Field for the whole image for one class k of the central pixel
@@ -74,6 +57,8 @@ def uMRF (pik, k):
 # file_name = '1221_M_71.27_AD_48975.nii'
 for file_name in os.listdir(path_in):
   print "Loading image", file_name
+  if file_name == 'new_seg_1221_M_71.27_AD_48975.nii':
+    continue
   imgData = read_file(path_in + file_name)
   # Priors
   image_prior = read_file(path_out_priors + 'propagated_priors_' + file_name)  # dims:

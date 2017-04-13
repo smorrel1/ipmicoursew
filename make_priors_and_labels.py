@@ -1,9 +1,10 @@
 from nifti import *
 import numpy as N
+import numpy as np
 from pylab import *
 import histogram
-import Segmentation
 import pandas as pd
+from utils import *
 # propagate the provided probabilistic tissue maps to all individual subject scans and use them as priors
 # 	-aff <filename>		Filename which contains the output affine transformation. [outputAffine.txt]
 # 	-res <filename>		Filename of the resampled image. [outputResult.nii]
@@ -19,7 +20,7 @@ path_out_ff = path + '1/out_ff/'
 path_out_labels = path + '1/out_labels/'
 path_out_priors = path + '1/out_priors/'
 path_out_jac = path + '1/jac/'
-path_seg = path + '1/seg/'                # segmented images (probabilities of each class)
+path_seg = path + '1/seg/'                # segmented images (probabilities of each class) from GMM
 
 def by_my_irroyal(command):
   with open('test.log', 'w') as f:
@@ -117,26 +118,59 @@ def jacobian_frequency():
     i += 1
 
 def ratio_gm_wm():
-  # extract for each subject the ratio between the grey matter volume and the white matter volume. Correlate the ratios
-  # with age with age for each sub-group separately. Discuss the findings [5].
-  # Use age, gender, grey matter volume, white matter volume and total intra-cranial volume (white matter, grey matter
-  # and cerebro-splinal fluid combined) as features of a classifier, motivate your choice(s) and explain your evaluation
-  #  strategy [10].
-  # Using the regional Jacobian determinant information as features of a logistic regression classifier, find the
-  # regions of interest that are best to differentiate the two sub-groups [5]. characterise the classifier performance
-  # when using only the best regions, comment on the results. [5]
-  i = 0
+  # 3.1 extract for each subject the ratio between the grey matter volume and the white matter volume.
+  # 3.2 Correlate the ratios with age with age for each sub-group separately. Discuss the findings [5].
+  # 3.3 Use age, gender, grey matter volume, white matter volume and total intra-cranial volume (white matter, grey
+  # matter and cerebro-splinal fluid combined) as features of a classifier, motivate your choice(s) and explain your
+  # evaluation strategy [10].
+  patient_i = 0
   gm = np.zeros(10)
   wm = np.zeros(10)
-  patient_data = np.zeros([20, 7])
-  pd.DataFrame(columns=['age', 'gender', 'wm_vol', 'gm_vol', 'wm_over_gm', 'csf_vol', 'ic_vol' ])
-  for file_name in os.listdir(path_out_jac)[0]:
-    # segmented_image = Segmentation.read_file(path_seg + 'new_seg_' + file_name)
-    segmented_image = np.rand([182, 214, 182, 4])
-    gm = sum(segmented_image[:, :, :, 1])  # TODO: check gm / wm class numbers
-    wm = sum(segmented_image[:, :, :, 2])
+  patient_data = np.zeros([20, 8])
+  #                         0         1         2           3            4        5     6 F=0, M=1
+  pd.DataFrame(columns=['csf_vol', 'gm_vol', 'wm_vol', 'wm_over_gm', 'ic_vol', 'age', 'gender'])
+  for file_name in os.listdir(path_seg):
+    segmented_image = read_file(path_seg + file_name)
+    print '\npatient:', file_name
+    # print np.shape(segmented_image)
+    for tissue_class in range(1, 4):   # Classes: other, CSF, GM, WM
+      patient_data[patient_i, tissue_class-1] = sum(segmented_image[:, :, :, tissue_class])
+      # print 'volume of class', tissue_class, 'is', patient_data[patient_i, tissue_class - 1]
+    patient_data[patient_i, 5] = file_name.split("_")[4]
+    patient_data[patient_i, 6] = file_name.split("_")[3] == 'M'
+    patient_data[patient_i, 7] = file_name.split("_")[5] == 'AD'
+    patient_i += 1
+  patient_data[:, 3] = patient_data[:, 2] / patient_data[:, 1]
+  patient_data[:, 4] = np.sum(patient_data[:, 0:3])
+  print '\n', patient_data[0, :]
+  np.savetxt(path + '1/patient_data.csv', patient_data, delimiter=',',
+             header='csf_vol,gm_vol,wm_vol,wm_over_gm,ic_vol,age,gender,AD')
 
-  i += 1
+def regional_jacobians():
+  # Using the regional Jacobian determinant information as features of a logistic regression classifier, find the
+  # regions of interest that are best to differentiate the two sub-groups [5].
+  # Characterise the classifier performance  # when using only the best regions, comment on the results. [5]
+
+  # identify labels
+  label_array = read_file(path_ave + 'average_label.nii')
+  label_intensities_unique = np.unique(label_array).astype(np.uint32)
+  print 'label_array', label_array
+  print 'labels', label_intensities_unique
+  number_of_labels = len(label_intensities_unique)
+  print 'count of labels', number_of_labels
+  # for individuals, load the propagated labels and the jacobian
+  file_name = '1056_F_71.22_AD_60740.nii'
+  propagated_labels = read_file(path_out_labels + 'propagated_labels' + file_name)
+  jacobian = read_file(path_out_jac + 'jac' + file_name)
+  # for each label extract the average Jacobian determinant
+
+  jacobian = np.ones([1, 2])*.9
+  print 'jacobian', jacobian
+  for label_j in label_intensities_unique:
+    print 'for label:', label_j
+    x = np.average(jacobian[label_array == label_j])
+    ave_jacobian[label_j] = x
+    print ave_jacobian[label_j]
 
 def make_difference_images():
   pass
@@ -149,7 +183,8 @@ if __name__ == '__main__':
   # resample_labels()
   # make_jacobians()
   # jacobian_frequency()
-  ratio_gm_wm()
+  # ratio_gm_wm()
+  regional_jacobians()
 
 # dims: ndim, x, y, z, t, u, v, w axis.  reversed.
 # print imgData.filename
