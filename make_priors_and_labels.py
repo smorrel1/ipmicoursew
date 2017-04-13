@@ -1,6 +1,7 @@
 from nifti import *
 import numpy as N
 import numpy as np
+import csv
 from pylab import *
 import histogram
 import pandas as pd
@@ -152,25 +153,38 @@ def regional_jacobians():
   # Characterise the classifier performance  # when using only the best regions, comment on the results. [5]
 
   # identify labels
-  label_array = read_file(path_ave + 'average_label.nii')
-  label_intensities_unique = np.unique(label_array).astype(np.uint32)
-  print 'label_array', label_array
-  print 'labels', label_intensities_unique
+  label_average_array = read_file(path_ave + 'average_label.nii')
+  label_intensities_unique = np.unique(label_average_array).astype(np.uint32)
+  print 'label_average_array', label_average_array.mean()
+  # print 'labels', label_intensities_unique
   number_of_labels = len(label_intensities_unique)
+  print number_of_labels
+  jacobian_regional_aves = np.zeros([20, number_of_labels])
   print 'count of labels', number_of_labels
   # for individuals, load the propagated labels and the jacobian
-  file_name = '1056_F_71.22_AD_60740.nii'
-  propagated_labels = read_file(path_out_labels + 'propagated_labels' + file_name)
-  jacobian = read_file(path_out_jac + 'jac' + file_name)
-  # for each label extract the average Jacobian determinant
+  patient_i = 0
+  patient_list = []
+  for file_name in os.listdir(path_out_jac):
+    propagated_labels = read_file(path_out_labels + 'propagated_labels' + file_name[3:])
+    patient_list.append(file_name[3:])
+    jacobian = read_file(path_out_jac + file_name)
+    print 'patient id', file_name, 'jacobian shape', jacobian.shape, 'mean', jacobian.mean(),
+    # for each label extract the average Jacobian determinant
+    for label_index in range(0, len(label_intensities_unique)):
+      # print 'for label:', label_intensities_unique[label_index], jacobian_regional_aves[patient_i, label_index]
+      jacobian_regional_aves[patient_i, label_index] = np.average(jacobian[propagated_labels == label_intensities_unique[label_index]])
+    print 'number of empty labels', sum(1 for x in jacobian_regional_aves[patient_i, :] if np.isnan(x))
+    # print jacobian_regional_aves[patient_i, :]
+    # print 'number of empty labels', len(jacobian_regional_aves[jacobian_regional_aves[patient_i, :].isnull])
+    patient_i += 1
+  # save data
+  np.savetxt(path + '1/regional_jacobians.csv', jacobian_regional_aves, delimiter=',',
+             header=','.join(map(str, label_intensities_unique)), comments='')
+  with open(path + '1/patient_ids.txt', 'wb') as resultFile:
+    wr = csv.writer(resultFile, dialect='excel', delimiter='\n')
+    wr.writerow(np.asarray(patient_list))
+  np.savetxt(path + '1/index_to_labels.csv', label_intensities_unique, delimiter=',', comments='')
 
-  jacobian = np.ones([1, 2])*.9
-  print 'jacobian', jacobian
-  for label_j in label_intensities_unique:
-    print 'for label:', label_j
-    x = np.average(jacobian[label_array == label_j])
-    ave_jacobian[label_j] = x
-    print ave_jacobian[label_j]
 
 def make_difference_images():
   pass
