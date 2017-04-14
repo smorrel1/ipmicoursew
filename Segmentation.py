@@ -15,7 +15,7 @@ path = '/home/smorrell/git/ipmi/MPHGB06_coursework_part'
 path_in = path + '1/images/'
 path_out_ff = path + '1/out_ff/'
 path_out_priors = path + '1/out_priors/'  # transformed priors
-path_seg = path + '1/seg/'                # segmented images (probabilities of each class)
+path_seg = path + '1/seg0.1/'                # segmented images (probabilities of each class)
 
 # VARIABLES
 # pik is the probability of pixel i being in class k (like fuzzy sets) ndims=4, [x, y, z, k]
@@ -55,10 +55,11 @@ def uMRF (pik, k):
 
 # file_name = '1056_F_71.22_AD_60740.nii'
 # file_name = '1221_M_71.27_AD_48975.nii'
-for file_name in os.listdir(path_in):
-  print "Loading image", file_name
-  if file_name in  os.listdir(path_seg):
-      # == 'new_seg_1221_M_71.27_AD_48975.nii':
+for file_name in ['1056_F_71.22_AD_60740.nii']:
+# for file_name in os.listdir(path_in):
+  print "\nLoading image", file_name,
+  if 'new_seg_' + file_name in os.listdir(path_seg):
+    print 'already done'
     continue
   imgData = read_file(path_in + file_name)
   # Priors
@@ -89,7 +90,7 @@ for file_name in os.listdir(path_in):
   oldLogLik = -1000000000
 
   # Initialise MRF
-  beta = 0.5
+  beta = 0.1
   MRF = np.ones([np.size(imgData, 0), np.size(imgData, 1), np.size(imgData, 2), numclass])
 
   # Iterative process

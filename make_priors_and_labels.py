@@ -17,14 +17,15 @@ path = '/home/smorrell/git/ipmi/MPHGB06_coursework_part'
 path_in = path + '1/images/'
 path_ave = path + '2/average/'
 path_out_rigid = path + '1/out_rigid/'
-path_out_ff = path + '1/out_ff/'
+path_out_ff = path + '1/out_ff0.001/'
 path_out_labels = path + '1/out_labels/'
 path_out_priors = path + '1/out_priors/'
-path_out_jac = path + '1/jac/'
+path_out_jac = path + '1/jac0.001/'
 path_seg = path + '1/seg/'                # segmented images (probabilities of each class) from GMM
 
 def by_my_irroyal(command):
   with open('test.log', 'w') as f:
+    print command
     process = subprocess.Popen(command.split(), stdout=subprocess.PIPE)
     for c in iter(lambda: process.stdout.read(1), ''):
       sys.stdout.write(c)
@@ -44,15 +45,16 @@ def linear_registrations():
 
 def non_linear_registration():
   for file_name in os.listdir(path_in):
-    command = 'reg_f3d -ref ' + path_in + file_name + \
-              ' -flo ' + path_ave + 'average_template.nii ' + \
-              ' -res ' + path_out_ff + 'ref_t_flo_p_affine_result' + file_name + \
-              ' -aff ' + path_out_rigid + 'ref_t_flo_p_affine_matrix' + file_name[:-4] + '.txt' \
-              ' -cpp ' + path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name + \
-              ' -jl 0 - gpu'  # experiment with different values
-              # 	-cpp <filename>		Filename of control point grid [outputCPP.nii]
-    # TODO L can we initialise with the affine matrix?
-    by_my_irroyal(command)
+    if file_name == '1056_F_71.22_AD_60740.nii':
+      command = 'reg_f3d -ref ' + path_in + file_name + \
+                ' -flo ' + path_ave + 'average_template.nii ' + \
+                ' -res ' + path_out_ff + 'ref_t_flo_p_affine_result' + file_name + \
+                ' -aff ' + path_out_rigid + 'ref_t_flo_p_affine_matrix' + file_name[:-4] + '.txt' \
+                ' -cpp ' + path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name + \
+                ' -jl 0.001'  # experiment with different values
+                # 	-cpp <filename>		Filename of control point grid [outputCPP.nii]
+      # TODO L can we initialise with the affine matrix?
+      by_my_irroyal(command)
 
 def resample_priors():
   for file_name in os.listdir(path_in):
@@ -78,10 +80,11 @@ def make_jacobians():
       OUTPUT 	-jac <filename> 		Filename of the Jacobian determinant map.
   """
   for file_name in os.listdir(path_in):
-    command = 'reg_jacobian -trans '+ path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name + \
-              ' -ref ' + path_in + file_name + \
-              ' -jac ' + path_out_jac + file_name
-    by_my_irroyal(command)
+    if file_name == '1056_F_71.22_AD_60740.nii':
+      command = 'reg_jacobian -trans '+ path_out_ff + 'ref_t_flo_new_image_nrr_cpp' + file_name + \
+                ' -ref ' + path_in + file_name + \
+                ' -jac ' + path_out_jac + file_name
+      by_my_irroyal(command)
 
 # 3 using the provided average image parcelation, you can compute the average Jacobian determinant values for all
 #   regions of interest
@@ -199,8 +202,8 @@ if __name__ == '__main__':
   # resample_labels()
   # make_jacobians()
   # jacobian_frequency()
-  # ratio_gm_wm()
-  regional_jacobians()
+  ratio_gm_wm()
+  # regional_jacobians()
 
 # dims: ndim, x, y, z, t, u, v, w axis.  reversed.
 # print imgData.filename
